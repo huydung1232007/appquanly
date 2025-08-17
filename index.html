@@ -1,487 +1,430 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quản lý chi tiêu</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản Lý Chi Tiêu</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
-    :root{
-      --bg:#0f172a;
-      --panel:#111827;
-      --muted:#94a3b8;
-      --text:#e5e7eb;
-      --accent:#22c55e;
-      --danger:#ef4444;
-      --warn:#f59e0b;
-      --border:#1f2937;
-      --input:#0b1220;
-      --chip:#1f2937;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      background:linear-gradient(180deg,#0b1020,#0f172a 40%,#0b1020);
-      color:var(--text);
-    }
-    header{
-      padding:20px 16px; border-bottom:1px solid var(--border);
-      position:sticky; top:0; backdrop-filter:saturate(160%) blur(8px);
-      background:rgba(15,23,42,.7); z-index:10;
-    }
-    .container{max-width:1100px; margin:0 auto; padding:20px 16px 80px}
-    h1{margin:0; font-size:20px; letter-spacing:.2px}
-    .grid{
-      display:grid; gap:16px;
-      grid-template-columns:1.2fr .8fr;
-    }
-    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-    .card{
-      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));
-      border:1px solid var(--border); border-radius:14px; overflow:hidden;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    .card h2{font-size:16px; margin:0 0 12px 0}
-    .card .body{padding:16px}
-    .row{display:flex; gap:12px; flex-wrap:wrap}
-    .row > .col{flex:1; min-width:160px}
-    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
-    input, select, button, textarea{
-      width:100%; padding:10px 12px; border-radius:10px;
-      border:1px solid var(--border); background:var(--input); color:var(--text);
-      outline:none;
-    }
-    input:focus, select:focus, textarea:focus{border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15)}
-    button{
-      background:#2563eb; border:1px solid #1d4ed8; cursor:pointer; font-weight:600;
-    }
-    button.secondary{background:#334155; border-color:#334155}
-    button.ghost{background:transparent; border-color:var(--border)}
-    button.danger{background:var(--danger); border-color:#dc2626}
-    .actions{display:flex; gap:10px; flex-wrap:wrap}
-    .stats{
-      display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
-    }
-    @media (max-width:600px){ .stats{grid-template-columns:1fr} }
-    .stat{
-      background:var(--panel); border:1px solid var(--border); border-radius:12px;
-      padding:14px;
-    }
-    .stat .label{font-size:12px; color:var(--muted)}
-    .stat .value{font-size:20px; font-weight:700}
-    .value.plus{color:var(--accent)}
-    .value.minus{color:#f87171}
-    .chips{display:flex; gap:8px; flex-wrap:wrap}
-    .chip{
-      background:var(--chip); border:1px solid var(--border); padding:6px 10px;
-      border-radius:999px; font-size:12px; color:var(--muted)
-    }
-    table{width:100%; border-collapse:collapse; font-size:14px}
-    thead th{
-      text-align:left; color:var(--muted); font-weight:600; padding:10px 8px;
-      position:sticky; top:60px; background:rgba(15,23,42,.85); backdrop-filter:blur(6px);
-      border-bottom:1px solid var(--border); z-index:5;
-    }
-    tbody td{padding:12px 8px; border-bottom:1px solid var(--border)}
-    tbody tr:hover{background:rgba(255,255,255,.03)}
-    .tag{
-      padding:2px 8px; border-radius:999px; font-size:12px;
-      background:#0b3b23; color:#34d399; border:1px solid #14532d
-    }
-    .tag.expense{background:#3b0b0b; color:#fca5a5; border-color:#7f1d1d}
-    .right{text-align:right}
-    .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .grow{flex:1}
-    .muted{color:var(--muted); font-size:12px}
-    .empty{padding:24px; text-align:center; color:var(--muted)}
-    .footer{
-      position:fixed; bottom:12px; right:12px; display:flex; gap:10px;
-    }
-    .hidden{display:none !important}
+    html, body { height: 100%; }
+    .card { box-shadow: 0 10px 25px rgba(0,0,0,.06); }
+    .scroll-smooth { scroll-behavior: smooth; }
+    .btn { @apply px-3 py-2 rounded-lg font-medium transition; }
+    .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+    .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+    .btn-ghost { @apply bg-white hover:bg-gray-100; }
+    .chip { @apply text-xs bg-gray-100 rounded px-2 py-1; }
+    .input { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
+    .select { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
   </style>
 </head>
-<body>
-  <header>
-    <h1>Quản lý chi tiêu</h1>
-    <div class="muted">Lưu cục bộ bằng LocalStorage • Không cần kết nối mạng</div>
-  </header>
-
-  <div class="container">
-    <div class="grid">
-      <!-- Form nhập -->
-      <div class="card">
-        <div class="body">
-          <h2>Thêm giao dịch</h2>
-          <form id="txForm">
-            <div class="row">
-              <div class="col">
-                <label for="date">Ngày</label>
-                <input type="date" id="date" required />
-              </div>
-              <div class="col">
-                <label for="type">Loại</label>
-                <select id="type">
-                  <option value="income">Thu</option>
-                  <option value="expense">Chi</option>
-                </select>
-              </div>
-              <div class="col">
-                <label for="category">Danh mục</label>
-                <input id="category" placeholder="Ăn uống, Lương, Đi lại..." />
-              </div>
-              <div class="col">
-                <label for="amount">Số tiền</label>
-                <input id="amount" type="number" step="0.01" min="0" placeholder="0" required />
-              </div>
-              <div class="col" style="flex-basis:100%">
-                <label for="note">Mô tả</label>
-                <input id="note" placeholder="Ghi chú ngắn..." />
-              </div>
-            </div>
-            <div class="actions" style="margin-top:12px">
-              <button type="submit">Lưu giao dịch</button>
-              <button type="button" id="resetForm" class="ghost">Xóa form</button>
-            </div>
-            <div class="chips" style="margin-top:12px">
-              <div class="chip">Mẹo: Nhập nhanh với Tab ↹</div>
-              <div class="chip">Dấu âm không cần, chọn loại Chi</div>
-              <div class="chip">Ctrl/Cmd+K để tìm kiếm</div>
-            </div>
-          </form>
-        </div>
+<body class="bg-gray-100 text-gray-800 scroll-smooth">
+  <div class="max-w-5xl mx-auto p-4 sm:p-6">
+    <header class="mb-4 sm:mb-6 flex items-center justify-between">
+      <h1 class="text-2xl sm:text-3xl font-extrabold">💰 Quản Lý Chi Tiêu</h1>
+      <div class="flex gap-2">
+        <button id="btn-export" class="btn btn-ghost">Xuất</button>
+        <label class="btn btn-ghost cursor-pointer">
+          Nhập <input id="file-import" type="file" accept="application/json" class="hidden">
+        </label>
       </div>
+    </header>
 
-      <!-- Thống kê & bộ lọc -->
-      <div class="card">
-        <div class="body">
-          <h2>Tổng quan</h2>
-          <div class="stats" id="stats">
-            <div class="stat">
-              <div class="label">Tổng thu</div>
-              <div class="value plus" id="sumIncome">0</div>
-            </div>
-            <div class="stat">
-              <div class="label">Tổng chi</div>
-              <div class="value minus" id="sumExpense">0</div>
-            </div>
-            <div class="stat">
-              <div class="label">Số dư</div>
-              <div class="value" id="balance">0</div>
-            </div>
+    <!-- Month Picker & Summary -->
+    <section class="card bg-white rounded-2xl p-4 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button id="prev-month" class="btn btn-ghost" title="Tháng trước">◀</button>
+          <div id="month-label" class="text-lg font-bold"></div>
+          <button id="next-month" class="btn btn-ghost" title="Tháng sau">▶</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+          <div class="bg-gray-100 rounded-xl p-3">
+            <div id="sum-income" class="text-green-600 font-bold text-base">0</div>
+            <div class="text-gray-500 text-xs">Thu nhập</div>
           </div>
-
-          <h2 style="margin-top:16px">Bộ lọc</h2>
-          <div class="row">
-            <div class="col">
-              <label for="filterType">Theo loại</label>
-              <select id="filterType">
-                <option value="all">Tất cả</option>
-                <option value="income">Thu</option>
-                <option value="expense">Chi</option>
-              </select>
-            </div>
-            <div class="col">
-              <label for="filterMonth">Theo tháng</label>
-              <input type="month" id="filterMonth" />
-            </div>
-            <div class="col">
-              <label for="search">Tìm kiếm</label>
-              <input id="search" placeholder="Mô tả, danh mục..." />
-            </div>
+          <div class="bg-gray-100 rounded-xl p-3">
+            <div id="sum-expense" class="text-red-600 font-bold text-base">0</div>
+            <div class="text-gray-500 text-xs">Chi tiêu</div>
           </div>
-          <div class="actions" style="margin-top:12px">
-            <button id="applyFilter" class="secondary">Áp dụng</button>
-            <button id="clearFilter" class="ghost">Xóa lọc</button>
+          <div class="bg-gray-100 rounded-xl p-3">
+            <div id="sum-balance" class="font-bold text-base">0</div>
+            <div class="text-gray-500 text-xs">Số dư</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Bảng giao dịch -->
-    <div class="card" style="margin-top:16px">
-      <div class="body">
-        <div class="toolbar">
-          <h2 style="margin-right:auto">Danh sách giao dịch</h2>
-          <div class="muted" id="countInfo">0 giao dịch</div>
+      <!-- Calendar -->
+      <div class="mt-4">
+        <div class="grid grid-cols-7 gap-1 text-center font-medium text-xs text-gray-500">
+          <div>T2</div><div>T3</div><div>T4</div><div>T5</div><div>T6</div><div>T7</div><div>CN</div>
         </div>
-        <div class="table-wrap" style="overflow:auto; max-height:55vh; margin-top:8px">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:120px">Ngày</th>
-                <th>Mô tả</th>
-                <th>Danh mục</th>
-                <th style="width:110px">Loại</th>
-                <th class="right" style="width:140px">Số tiền</th>
-                <th style="width:110px">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">
-              <tr class="emptyRow"><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div id="calendar" class="grid grid-cols-7 gap-1 mt-2"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Xuất/Nhập -->
-    <div class="card" style="margin-top:16px">
-      <div class="body">
-        <h2>Sao lưu & nhập dữ liệu</h2>
-        <div class="row">
-          <div class="col">
-            <label>Dữ liệu JSON</label>
-            <textarea id="ioArea" rows="6" placeholder="Dữ liệu sẽ hiện ở đây khi xuất, hoặc dán JSON để nhập"></textarea>
-          </div>
+    <!-- Chart + Controls -->
+    <section class="grid md:grid-cols-2 gap-4 sm:gap-6 mt-4">
+      <div class="card bg-white rounded-2xl p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-bold">Biểu đồ chi tiêu (tháng)</h2>
+          <span class="chip" id="chart-month"></span>
         </div>
-        <div class="actions" style="margin-top:12px">
-          <button id="exportBtn" class="secondary">Xuất JSON</button>
-          <button id="importBtn" class="ghost">Nhập JSON</button>
-          <button id="clearAllBtn" class="danger">Xóa tất cả</button>
-        </div>
+        <canvas id="pie"></canvas>
       </div>
-    </div>
+
+      <div class="card bg-white rounded-2xl p-4 sm:p-6">
+        <div class="flex gap-2 mb-3">
+          <input id="search" class="input" placeholder="Tìm mô tả...">
+          <select id="sort" class="select w-44">
+            <option value="createdAt-desc">Mới nhất</option>
+            <option value="createdAt-asc">Cũ nhất</option>
+            <option value="amount-desc">Số tiền ↓</option>
+            <option value="amount-asc">Số tiền ↑</option>
+          </select>
+        </div>
+        <div id="list" class="space-y-3 max-h-[360px] overflow-auto pr-1"></div>
+      </div>
+    </section>
+
+    <!-- Add/Edit Form -->
+    <section class="card bg-white rounded-2xl p-4 sm:p-6 mt-4 sm:mt-6">
+      <h2 class="font-bold mb-3">Thêm / Sửa giao dịch</h2>
+      <form id="form" class="grid md:grid-cols-2 gap-3">
+        <input type="hidden" id="tx-id">
+        <div>
+          <label class="text-sm text-gray-600">Số tiền (VND)</label>
+          <input id="amount" class="input" placeholder="VD: 120000">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Mô tả</label>
+          <input id="description" class="input" placeholder="VD: Cà phê">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Ngày</label>
+          <input id="date" type="date" class="input">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Loại</label>
+          <select id="type" class="select">
+            <option value="expense">Chi phí</option>
+            <option value="income">Thu nhập</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Danh mục</label>
+          <select id="category" class="select"></select>
+        </div>
+        <div class="flex items-end gap-2">
+          <button class="btn btn-primary" id="save">Lưu</button>
+          <button type="button" class="btn btn-ghost" id="reset">Làm mới</button>
+        </div>
+      </form>
+    </section>
+
+    <footer class="text-center text-xs text-gray-500 mt-6">
+      Lưu cục bộ bằng <code>localStorage</code>. Không cần mạng hay máy chủ.
+    </footer>
   </div>
 
-  <!-- Nút nhanh -->
-  <div class="footer">
-    <button id="quickThisMonth" class="secondary">Lọc tháng này</button>
-    <button id="addDemo" class="ghost">Thêm dữ liệu mẫu</button>
-  </div>
+<script>
+// ====== Constants ======
+const CATEGORIES = [
+  { key: 'Ăn uống', color: '#FCD34D' },
+  { key: 'Phí giao lưu', color: '#FFCA28' },
+  { key: 'Y tế', color: '#4CAF50' },
+  { key: 'Mỹ phẩm', color: '#F48FB1' },
+  { key: 'Tiền điện', color: '#03A9F4' },
+  { key: 'Tiền nhà', color: '#FFB74D' },
+  { key: 'Giáo dục', color: '#E57373' },
+  { key: 'Quần áo', color: '#5C6BC0' },
+  { key: 'Chi tiêu khác', color: '#9E9E9E' },
+  { key: 'Thu nhập khác', color: '#66BB6A' },
+];
 
-  <script>
-    // --------- Trợ giúp ----------
-    const $ = (s,root=document)=>root.querySelector(s);
-    const $$ = (s,root=document)=>Array.from(root.querySelectorAll(s));
-    const fmt = new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND',maximumFractionDigits:0});
-    const today = ()=>new Date().toISOString().slice(0,10);
-    const ym = d => d.slice(0,7); // yyyy-MM
-    const uid = ()=>crypto.randomUUID?.():(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+// ====== Storage ======
+const STORAGE_KEY = 'xpense.v1';
+const loadAll = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+const saveAll = (arr) => localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
 
-    // --------- Trạng thái ----------
-    let state = {
-      items: [], // {id,date,type,category,amount,note}
-      filter: { type:'all', month:'', q:'' }
-    };
-    const LS_KEY = 'expense_manager_v1';
+// ====== Helpers ======
+const fmt = (n) => Number(n||0).toLocaleString('vi-VN');
+const todayStr = () => new Date().toISOString().slice(0,10);
+const byMonth = (d) => ({y:d.getFullYear(), m:d.getMonth()}); // 0-index
 
-    // --------- Lưu/đọc ----------
-    function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
-    function load(){
-      const raw = localStorage.getItem(LS_KEY);
-      if(raw){
-        try{ state = JSON.parse(raw); }
-        catch(e){ console.warn('Dữ liệu lỗi, reset.'); state = {items:[],filter:{type:'all',month:'',q:''}}; }
-      }
-    }
+// ====== State ======
+let state = {
+  selected: new Date(),
+  search: '',
+  sort: 'createdAt-desc',
+  data: loadAll(),
+  editingId: null,
+};
 
-    // --------- Tính toán ----------
-    function filtered(){
-      const {type,month,q} = state.filter;
-      return state.items.filter(x=>{
-        if(type!=='all' && x.type!==type) return false;
-        if(month && ym(x.date)!==month) return false;
-        if(q){
-          const s = (x.note+' '+x.category).toLowerCase();
-          if(!s.includes(q.toLowerCase())) return false;
-        }
-        return true;
-      });
-    }
-    function totals(list){
-      let inc=0, exp=0;
-      for(const x of list){
-        if(x.type==='income') inc += x.amount;
-        else exp += x.amount;
-      }
-      return {inc, exp, bal: inc-exp};
-    }
+// Seed demo if empty
+if (!state.data.length) {
+  state.data = [
+    { id: crypto.randomUUID(), amount: 35000, description: 'Cà phê', type:'expense', category:'Ăn uống', createdAt: new Date().toISOString() },
+    { id: crypto.randomUUID(), amount: 5000000, description: 'Lương', type:'income', category:'Thu nhập khác', createdAt: new Date().toISOString() },
+    { id: crypto.randomUUID(), amount: 250000, description: 'Siêu thị', type:'expense', category:'Ăn uống', createdAt: new Date().toISOString() },
+  ];
+  saveAll(state.data);
+}
 
-    // --------- Render ----------
-    function render(){
-      // stats
-      const list = filtered();
-      const t = totals(list);
-      $('#sumIncome').textContent = fmt.format(t.inc);
-      $('#sumExpense').textContent = fmt.format(t.exp);
-      const balEl = $('#balance');
-      balEl.textContent = fmt.format(t.bal);
-      balEl.classList.toggle('plus', t.bal>=0);
-      balEl.classList.toggle('minus', t.bal<0);
-      $('#countInfo').textContent = `${list.length} giao dịch`;
+// ====== Elements ======
+const el = {
+  monthLabel: document.getElementById('month-label'),
+  calendar: document.getElementById('calendar'),
+  sumIncome: document.getElementById('sum-income'),
+  sumExpense: document.getElementById('sum-expense'),
+  sumBalance: document.getElementById('sum-balance'),
+  chartMonth: document.getElementById('chart-month'),
+  list: document.getElementById('list'),
+  search: document.getElementById('search'),
+  sort: document.getElementById('sort'),
+  form: document.getElementById('form'),
+  amount: document.getElementById('amount'),
+  description: document.getElementById('description'),
+  date: document.getElementById('date'),
+  type: document.getElementById('type'),
+  category: document.getElementById('category'),
+  txId: document.getElementById('tx-id'),
+  save: document.getElementById('save'),
+  reset: document.getElementById('reset'),
+  prev: document.getElementById('prev-month'),
+  next: document.getElementById('next-month'),
+  exportBtn: document.getElementById('btn-export'),
+  importFile: document.getElementById('file-import'),
+  pie: document.getElementById('pie'),
+};
 
-      // table
-      const tb = $('#tableBody');
-      tb.innerHTML = '';
-      if(list.length===0){
-        const tr=document.createElement('tr');
-        tr.innerHTML = `<td colspan="6" class="empty">Không có giao dịch phù hợp</td>`;
-        tb.appendChild(tr);
-      }else{
-        for(const x of list.sort((a,b)=>b.date.localeCompare(a.date))){
-          const tr=document.createElement('tr');
-          tr.innerHTML = `
-            <td>${x.date}</td>
-            <td>${escapeHtml(x.note||'')}</td>
-            <td>${escapeHtml(x.category||'')}</td>
-            <td><span class="tag ${x.type==='expense'?'expense':''}">${x.type==='income'?'Thu':'Chi'}</span></td>
-            <td class="right">${fmt.format(x.amount)}</td>
-            <td>
-              <button class="ghost" data-edit="${x.id}">Sửa</button>
-              <button class="danger" data-del="${x.id}">Xóa</button>
-            </td>
-          `;
-          tb.appendChild(tr);
-        }
-      }
-    }
+// Fill categories
+el.category.innerHTML = CATEGORIES.map(c => `<option value="${c.key}">${c.key}</option>`).join('');
+el.date.value = todayStr();
 
-    function escapeHtml(s){
-      return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#039;' }[c]));
-    }
+// ====== Calendar Render ======
+function renderCalendar() {
+  const d = state.selected;
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  el.monthLabel.textContent = `tháng ${m+1} năm ${y}`;
+  el.chartMonth.textContent = `${m+1}/${y}`;
 
-    // --------- Sự kiện ----------
-    function bindEvents(){
-      // form
-      $('#txForm').addEventListener('submit', e=>{
-        e.preventDefault();
-        const item = {
-          id: uid(),
-          date: $('#date').value || today(),
-          type: $('#type').value,
-          category: $('#category').value.trim(),
-          amount: Number($('#amount').value)||0,
-          note: $('#note').value.trim()
-        };
-        if(!item.amount || item.amount<0){ alert('Số tiền không hợp lệ.'); return; }
-        state.items.push(item);
-        save(); render();
-        $('#txForm').reset();
-        $('#date').value = today();
-        $('#type').value = 'expense';
-      });
-      $('#resetForm').addEventListener('click', ()=>{ $('#txForm').reset(); $('#date').value=today(); });
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m+1, 0).getDate();
+  const lead = (first.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  const cells = [];
 
-      // filter
-      $('#applyFilter').addEventListener('click', ()=>{
-        state.filter.type = $('#filterType').value;
-        state.filter.month = $('#filterMonth').value;
-        state.filter.q = $('#search').value.trim();
-        save(); render();
-      });
-      $('#clearFilter').addEventListener('click', ()=>{
-        state.filter = {type:'all',month:'',q:''};
-        $('#filterType').value='all'; $('#filterMonth').value=''; $('#search').value='';
-        save(); render();
-      });
+  for (let i=0; i<lead; i++) cells.push(null);
+  for (let d=1; d<=last; d++) cells.push(d);
 
-      // search shortcut
-      document.addEventListener('keydown', (e)=>{
-        if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); $('#search').focus(); }
-      });
+  el.calendar.innerHTML = cells.map(day => {
+    if (!day) return `<div></div>`;
+    const isSel = day === state.selected.getDate();
+    return `<button data-day="${day}"
+      class="h-10 sm:h-12 rounded-lg ${isSel ? 'bg-pink-500 text-white' : 'bg-white hover:bg-gray-100'}">
+      ${day}
+    </button>`;
+  }).join('');
 
-      // table actions
-      $('#tableBody').addEventListener('click', e=>{
-        const del = e.target.closest('[data-del]');
-        const edit = e.target.closest('[data-edit]');
-        if(del){
-          const id = del.getAttribute('data-del');
-          const i = state.items.findIndex(x=>x.id===id);
-          if(i>-1 && confirm('Xóa giao dịch này?')){ state.items.splice(i,1); save(); render(); }
-        }
-        if(edit){
-          const id = edit.getAttribute('data-edit');
-          const item = state.items.find(x=>x.id===id);
-          if(!item) return;
-          const nd = prompt('Ngày (YYYY-MM-DD):', item.date) || item.date;
-          const nt = prompt('Loại (income/expense):', item.type) || item.type;
-          const nc = prompt('Danh mục:', item.category) || item.category;
-          const na = Number(prompt('Số tiền:', item.amount) || item.amount);
-          const nn = prompt('Mô tả:', item.note) || item.note;
-          if(!na || na<0){ alert('Số tiền không hợp lệ.'); return; }
-          Object.assign(item, {date:nd, type:nt==='income'?'income':'expense', category:nc, amount:na, note:nn});
-          save(); render();
-        }
-      });
-
-      // export/import/clear
-      $('#exportBtn').addEventListener('click', ()=>{
-        const data = JSON.stringify(state.items, null, 2);
-        $('#ioArea').value = data;
-        // download file
-        const blob = new Blob([data], {type:'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `giao_dich_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      });
-
-      $('#importBtn').addEventListener('click', ()=>{
-        let raw = $('#ioArea').value.trim();
-        if(!raw){ alert('Dán JSON vào ô văn bản trước.'); return; }
-        try{
-          const arr = JSON.parse(raw);
-          if(!Array.isArray(arr)) throw new Error('Sai định dạng');
-          // chuẩn hóa
-          const cleaned = arr.map(x=>({
-            id: x.id || uid(),
-            date: (x.date||today()).slice(0,10),
-            type: x.type==='income'?'income':'expense',
-            category: String(x.category||''),
-            amount: Number(x.amount)||0,
-            note: String(x.note||'')
-          })).filter(x=>x.amount>0);
-          state.items = cleaned;
-          save(); render();
-          alert('Nhập dữ liệu thành công!');
-        }catch(e){
-          alert('JSON không hợp lệ: '+e.message);
-        }
-      });
-
-      $('#clearAllBtn').addEventListener('click', ()=>{
-        if(confirm('Xóa toàn bộ dữ liệu? Điều này không thể hoàn tác.')){
-          state.items = []; save(); render();
-        }
-      });
-
-      // quick actions
-      $('#quickThisMonth').addEventListener('click', ()=>{
-        const m = new Date(); const month = `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`;
-        state.filter = { type:'all', month, q:'' };
-        $('#filterType').value='all'; $('#filterMonth').value=month; $('#search').value='';
-        save(); render();
-      });
-
-      $('#addDemo').addEventListener('click', ()=>{
-        const base = ym(today());
-        const demo = [
-          {date:`${base}-01`, type:'income',  category:'Lương', amount:15_000_000, note:'Tháng này'},
-          {date:`${base}-02`, type:'expense', category:'Ăn uống', amount:120_000, note:'Bún chả'},
-          {date:`${base}-03`, type:'expense', category:'Đi lại', amount:60_000, note:'Xăng'},
-          {date:`${base}-05`, type:'expense', category:'Giải trí', amount:200_000, note:'Phim'},
-          {date:`${base}-10`, type:'expense', category:'Mua sắm', amount:350_000, note:'Áo thun'},
-          {date:`${base}-12`, type:'income',  category:'Freelance', amount:3_000_000, note:'Thiết kế'},
-        ].map(x=>({...x, id:uid()}));
-        state.items.push(...demo);
-        save(); render();
-      });
-    }
-
-    // --------- Khởi động ----------
-    function init(){
-      load();
-      // default form values
-      $('#date').value = today();
-      $('#type').value = 'expense';
-      // filter UI sync
-      $('#filterType').value = state.filter?.type || 'all';
-      $('#filterMonth').value = state.filter?.month || '';
-      $('#search').value = state.filter?.q || '';
-      bindEvents();
+  // Bind clicks
+  el.calendar.querySelectorAll('button[data-day]').forEach(b => {
+    b.addEventListener('click', () => {
+      const day = Number(b.getAttribute('data-day'));
+      state.selected = new Date(y, m, day);
       render();
-    }
-    document.addEventListener('DOMContentLoaded', init);
-  </script>
+    });
+  });
+}
+
+// ====== List + Summary Render ======
+function getMonthData() {
+  const { y, m } = byMonth(state.selected);
+  return state.data.filter(t => {
+    const dt = new Date(t.createdAt);
+    return dt.getFullYear() === y && dt.getMonth() === m;
+  });
+}
+function getDayData() {
+  const sel = state.selected.toDateString();
+  return getMonthData().filter(t => new Date(t.createdAt).toDateString() === sel);
+}
+
+function renderSummary() {
+  const month = getMonthData();
+  const income = month.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
+  const expense = month.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
+  const balance = income - expense;
+  el.sumIncome.textContent = fmt(income);
+  el.sumExpense.textContent = fmt(expense);
+  el.sumBalance.textContent = fmt(balance);
+  el.sumBalance.className = `font-bold text-base ${balance >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+}
+
+function renderList() {
+  const q = state.search.trim().toLowerCase();
+  let arr = getDayData().filter(t => t.description.toLowerCase().includes(q));
+
+  const [key, dir] = state.sort.split('-');
+  arr.sort((a,b) => {
+    if (key === 'createdAt') return dir === 'asc' ? (new Date(a.createdAt)-new Date(b.createdAt)) : (new Date(b.createdAt)-new Date(a.createdAt));
+    if (key === 'amount') return dir === 'asc' ? (a.amount-b.amount) : (b.amount-a.amount);
+    return 0;
+  });
+
+  el.list.innerHTML = arr.map(t => `
+    <div class="bg-gray-50 hover:bg-gray-100 rounded-xl p-3 flex justify-between items-center">
+      <div>
+        <div class="font-semibold">${t.description}</div>
+        <div class="text-xs text-gray-500 mt-0.5">${new Date(t.createdAt).toLocaleString('vi-VN')}</div>
+        <div class="text-xs mt-1"><span class="chip">${t.category}</span> <span class="chip">${t.type==='expense'?'Chi phí':'Thu nhập'}</span></div>
+      </div>
+      <div class="text-right">
+        <div class="font-bold ${t.type==='expense'?'text-red-600':'text-green-600'}">${t.type==='expense'?'-':'+'}${fmt(t.amount)}</div>
+        <div class="mt-1 flex gap-1 justify-end">
+          <button class="btn btn-ghost text-blue-600" data-edit="${t.id}">Sửa</button>
+          <button class="btn btn-ghost text-red-600" data-del="${t.id}">Xóa</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Bind edit/delete
+  el.list.querySelectorAll('button[data-edit]').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-edit'))));
+  el.list.querySelectorAll('button[data-del]').forEach(b => b.addEventListener('click', () => delTx(b.getAttribute('data-del'))));
+}
+
+// ====== Chart Render ======
+let pieChart = null;
+function renderChart() {
+  const month = getMonthData().filter(t=>t.type==='expense');
+  const totals = {};
+  month.forEach(t => totals[t.category] = (totals[t.category]||0) + Number(t.amount||0));
+
+  const labels = Object.keys(totals);
+  const values = labels.map(k => totals[k]);
+  const colors = labels.map(l => (CATEGORIES.find(c=>c.key===l)?.color) || '#9CA3AF');
+
+  if (pieChart) { pieChart.destroy(); }
+  pieChart = new Chart(el.pie, {
+    type: 'pie',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+// ====== CRUD ======
+function upsertTx(tx){
+  const idx = state.data.findIndex(x=>x.id===tx.id);
+  if (idx >= 0) state.data[idx] = tx;
+  else state.data.unshift(tx);
+  saveAll(state.data);
+  render();
+}
+function delTx(id){
+  state.data = state.data.filter(x=>x.id!==id);
+  saveAll(state.data);
+  render();
+}
+function startEdit(id){
+  const t = state.data.find(x=>x.id===id);
+  if (!t) return;
+  state.editingId = id;
+  el.txId.value = id;
+  el.amount.value = t.amount;
+  el.description.value = t.description;
+  el.date.value = new Date(t.createdAt).toISOString().slice(0,10);
+  el.type.value = t.type;
+  el.category.value = t.category;
+  el.amount.focus();
+}
+
+// ====== Events ======
+el.prev.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()-1); state.selected=d; render(); });
+el.next.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()+1); state.selected=d; render(); });
+
+el.search.addEventListener('input', (e)=>{ state.search=e.target.value; renderList(); });
+el.sort.addEventListener('change', (e)=>{ state.sort=e.target.value; renderList(); });
+
+el.reset.addEventListener('click', (e)=>{
+  e.preventDefault();
+  state.editingId = null;
+  el.txId.value='';
+  el.amount.value='';
+  el.description.value='';
+  el.date.value=todayStr();
+  el.type.value='expense';
+  el.category.value=CATEGORIES[0].key;
+});
+
+el.form.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const amount = parseFloat((el.amount.value+'').replace(/[^\d.-]/g,''));
+  if (isNaN(amount) || amount <= 0) { alert('Số tiền không hợp lệ'); return; }
+
+  const tx = {
+    id: el.txId.value || crypto.randomUUID(),
+    amount,
+    description: el.description.value.trim() || '(Không mô tả)',
+    type: el.type.value,
+    category: el.category.value,
+    createdAt: new Date(el.date.value || todayStr()).toISOString(),
+  };
+  upsertTx(tx);
+  el.reset.click();
+});
+
+// Export/Import
+el.exportBtn.addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `chi_tieu_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+el.importFile.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const arr = JSON.parse(reader.result);
+      if (!Array.isArray(arr)) throw new Error('File không đúng định dạng');
+      // normalize
+      const cleaned = arr.map(t => ({
+        id: t.id || crypto.randomUUID(),
+        amount: Number(t.amount)||0,
+        description: t.description || '',
+        type: (t.type==='income'?'income':'expense'),
+        category: t.category || 'Chi tiêu khác',
+        createdAt: t.createdAt || new Date().toISOString(),
+      }));
+      state.data = cleaned;
+      saveAll(state.data);
+      render();
+      e.target.value = '';
+    } catch(err) { alert('Không thể nhập: ' + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+// ====== Render Root ======
+function render(){
+  renderCalendar();
+  renderSummary();
+  renderList();
+  renderChart();
+}
+
+// First paint
+render();
+</script>
 </body>
 </html>
