@@ -32,66 +32,64 @@
   <div class="max-w-5xl mx-auto p-4 sm:p-6">
     <header class="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
       <h1 class="text-2xl sm:text-3xl font-extrabold">💰 Quản Lý Chi Tiêu</h1>
-      <div class="flex flex-wrap items-center gap-2">
-        <button id="btn-export" class="btn btn-ghost">Tải JSON</button>
-        <label class="btn btn-ghost cursor-pointer">
-          Nhập JSON <input id="file-import" type="file" accept="application/json" class="hidden">
-        </label>
-        <button id="btn-backup-now" class="btn btn-primary">Sao lưu ngay → Drive</button>
+     <button onclick="toggleSettings()" class="text-gray-600 hover:text-gray-900">
+      ⚙️ Cài đặt
+    </button>
+  </header>
 
-        <!-- Settings dropdown -->
-        <div class="relative">
-          <button id="btn-settings" class="btn btn-ghost">⚙️ Cài đặt</button>
-          <div id="panel-settings" class="hidden absolute right-0 mt-2 w-[28rem] max-w-[90vw] bg-white border border-gray-200 rounded-xl p-4 z-10 card">
-            <div class="font-semibold mb-2">Google Drive</div>
-            <div class="space-y-2 text-sm">
-              <div>
-                <label class="block text-xs muted mb-1">Google OAuth Client ID</label>
-                <input id="gis-client-id" class="input" placeholder="vd: 1234567890-xxxxxxxx.apps.googleusercontent.com">
-                <div class="text-xs muted mt-1">Tạo trong <b>Google Cloud Console → Credentials → OAuth 2.0 Client IDs</b>. App type: Web. Authorized JS origins: file:// không cần; chạy file này trực tiếp được.</div>
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-xs muted mb-1">Tên file backup (trên Drive)</label>
-                  <input id="drive-filename" class="input" placeholder="chi_tieu.json" value="chi_tieu.json">
-                </div>
-                <div>
-                  <label class="block text-xs muted mb-1">File ID (nếu đã có)</label>
-                  <input id="drive-fileid" class="input" placeholder="(tự tạo nếu để trống)">
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button id="btn-auth" class="btn btn-ghost">Đăng nhập Google</button>
-                <button id="btn-signout" class="btn btn-ghost">Đăng xuất</button>
-                <span id="auth-status" class="text-xs muted"></span>
-              </div>
-            </div>
+  <!-- Main content (placeholder) -->
+  <main class="p-4">
+    <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
+      <h2 class="text-lg font-bold mb-4">Nội dung quản lý chi tiêu...</h2>
+      <p class="text-gray-600">Phần này giữ nguyên từ app gốc của bạn.</p>
+    </div>
+  </main>
 
-            <hr class="my-3">
-
-            <div class="font-semibold mb-2">Tự động backup</div>
-            <div class="space-y-2 text-sm">
-              <label class="flex items-center gap-2">
-                <input type="radio" name="autoMode" value="off" class="auto-mode">
-                <span>Tắt</span>
-              </label>
-              <label class="flex items-center gap-2">
-                <input type="radio" name="autoMode" value="change" class="auto-mode">
-                <span>Mỗi khi thay đổi (giới hạn 30s/lần)</span>
-              </label>
-              <label class="flex items-center gap-2">
-                <input type="radio" name="autoMode" value="interval" class="auto-mode">
-                <span>Định kỳ mỗi</span>
-                <input id="auto-minutes" type="number" min="1" class="input w-20" value="5">
-                <span>phút</span>
-              </label>
-            </div>
-            <div class="text-xs text-gray-500 mt-3">
-              Quyền yêu cầu: <code>drive.file</code> (app chỉ thấy/cập nhật file do app tạo ra).
-            </div>
-          </div>
-        </div>
+  <!-- Settings Panel -->
+  <div id="settingsPanel" 
+       class="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl transform translate-x-full transition-transform duration-300 overflow-y-auto rounded-l-xl z-50">
+    <div class="p-6 space-y-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold text-gray-700">⚙️ Cài đặt</h2>
+        <button onclick="toggleSettings()" class="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
       </div>
+
+      <!-- Google OAuth -->
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">Google Client ID</label>
+        <input id="clientIdInput" type="text" placeholder="Nhập Client ID..."
+               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
+      </div>
+
+      <!-- Drive Backup -->
+      <div class="space-y-3">
+        <button id="loginBtn" 
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg">Đăng nhập Google</button>
+        <button id="logoutBtn" 
+                class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg hidden">Đăng xuất</button>
+
+        <button id="backupBtn" 
+                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg">☁️ Sao lưu</button>
+        <button id="restoreBtn" 
+                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg">🔄 Khôi phục</button>
+      </div>
+
+      <!-- Auto backup -->
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">Tự động sao lưu</label>
+        <select id="autoBackupSelect" 
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+          <option value="off">Tắt</option>
+          <option value="onChange">Khi có thay đổi</option>
+          <option value="interval">Định kỳ</option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div id="status" class="text-sm text-gray-500 italic"></div>
+    </div>
+  </div>
     </header>
 
     <!-- Month Picker & Summary -->
