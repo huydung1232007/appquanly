@@ -3,13 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quản Lý Chi Tiêu</title>
+  <title>Quản Lý Chi Tiêu (Backup Google Drive)</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Google Identity Services (for OAuth tokens) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     html, body { height: 100%; }
@@ -22,17 +25,72 @@
     .chip { @apply text-xs bg-gray-100 rounded px-2 py-1; }
     .input { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
     .select { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
+    .muted { @apply text-gray-500; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 scroll-smooth">
   <div class="max-w-5xl mx-auto p-4 sm:p-6">
-    <header class="mb-4 sm:mb-6 flex items-center justify-between">
+    <header class="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
       <h1 class="text-2xl sm:text-3xl font-extrabold">💰 Quản Lý Chi Tiêu</h1>
-      <div class="flex gap-2">
-        <button id="btn-export" class="btn btn-ghost">Xuất</button>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-export" class="btn btn-ghost">Tải JSON</button>
         <label class="btn btn-ghost cursor-pointer">
-          Nhập <input id="file-import" type="file" accept="application/json" class="hidden">
+          Nhập JSON <input id="file-import" type="file" accept="application/json" class="hidden">
         </label>
+        <button id="btn-backup-now" class="btn btn-primary">Sao lưu ngay → Drive</button>
+
+        <!-- Settings dropdown -->
+        <div class="relative">
+          <button id="btn-settings" class="btn btn-ghost">⚙️ Cài đặt</button>
+          <div id="panel-settings" class="hidden absolute right-0 mt-2 w-[28rem] max-w-[90vw] bg-white border border-gray-200 rounded-xl p-4 z-10 card">
+            <div class="font-semibold mb-2">Google Drive</div>
+            <div class="space-y-2 text-sm">
+              <div>
+                <label class="block text-xs muted mb-1">Google OAuth Client ID</label>
+                <input id="gis-client-id" class="input" placeholder="vd: 1234567890-xxxxxxxx.apps.googleusercontent.com">
+                <div class="text-xs muted mt-1">Tạo trong <b>Google Cloud Console → Credentials → OAuth 2.0 Client IDs</b>. App type: Web. Authorized JS origins: file:// không cần; chạy file này trực tiếp được.</div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs muted mb-1">Tên file backup (trên Drive)</label>
+                  <input id="drive-filename" class="input" placeholder="chi_tieu.json" value="chi_tieu.json">
+                </div>
+                <div>
+                  <label class="block text-xs muted mb-1">File ID (nếu đã có)</label>
+                  <input id="drive-fileid" class="input" placeholder="(tự tạo nếu để trống)">
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-auth" class="btn btn-ghost">Đăng nhập Google</button>
+                <button id="btn-signout" class="btn btn-ghost">Đăng xuất</button>
+                <span id="auth-status" class="text-xs muted"></span>
+              </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="font-semibold mb-2">Tự động backup</div>
+            <div class="space-y-2 text-sm">
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="off" class="auto-mode">
+                <span>Tắt</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="change" class="auto-mode">
+                <span>Mỗi khi thay đổi (giới hạn 30s/lần)</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="interval" class="auto-mode">
+                <span>Định kỳ mỗi</span>
+                <input id="auto-minutes" type="number" min="1" class="input w-20" value="5">
+                <span>phút</span>
+              </label>
+            </div>
+            <div class="text-xs text-gray-500 mt-3">
+              Quyền yêu cầu: <code>drive.file</code> (app chỉ thấy/cập nhật file do app tạo ra).
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -129,7 +187,7 @@
     </section>
 
     <footer class="text-center text-xs text-gray-500 mt-6">
-      Lưu cục bộ bằng <code>localStorage</code>. Không cần mạng hay máy chủ.
+      Dữ liệu lưu cục bộ (localStorage) + có thể đồng bộ lên Google Drive (yêu cầu client ID & đăng nhập).
     </footer>
   </div>
 
@@ -150,13 +208,22 @@ const CATEGORIES = [
 
 // ====== Storage ======
 const STORAGE_KEY = 'xpense.v1';
+const SETTINGS_KEY = 'xpense.settings.drive.v1';
 const loadAll = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-const saveAll = (arr) => localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+const saveAll = (arr) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  onDataChanged();
+};
+
+const defaultSettings = { mode:'off', minutes:5, lastBackup:0, clientId:'', fileName:'chi_tieu.json', fileId:'', token:'' };
+const loadSettings = () => Object.assign({}, defaultSettings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+const saveSettings = (s) => localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 
 // ====== Helpers ======
 const fmt = (n) => Number(n||0).toLocaleString('vi-VN');
 const todayStr = () => new Date().toISOString().slice(0,10);
 const byMonth = (d) => ({y:d.getFullYear(), m:d.getMonth()}); // 0-index
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ====== State ======
 let state = {
@@ -165,9 +232,12 @@ let state = {
   sort: 'createdAt-desc',
   data: loadAll(),
   editingId: null,
+  settings: loadSettings(),
+  intervalId: null,
+  oauth: { token: null, expires: 0, client: null }
 };
 
-// Seed demo if empty
+// Seed demo
 if (!state.data.length) {
   state.data = [
     { id: crypto.randomUUID(), amount: 35000, description: 'Cà phê', type:'expense', category:'Ăn uống', createdAt: new Date().toISOString() },
@@ -195,18 +265,39 @@ const el = {
   type: document.getElementById('type'),
   category: document.getElementById('category'),
   txId: document.getElementById('tx-id'),
-  save: document.getElementById('save'),
   reset: document.getElementById('reset'),
   prev: document.getElementById('prev-month'),
   next: document.getElementById('next-month'),
   exportBtn: document.getElementById('btn-export'),
   importFile: document.getElementById('file-import'),
   pie: document.getElementById('pie'),
+  settingsBtn: document.getElementById('btn-settings'),
+  settingsPanel: document.getElementById('panel-settings'),
+  autoModes: null,
+  autoMinutes: document.getElementById('auto-minutes'),
+  authBtn: document.getElementById('btn-auth'),
+  signoutBtn: document.getElementById('btn-signout'),
+  authStatus: document.getElementById('auth-status'),
+  clientId: document.getElementById('gis-client-id'),
+  fileName: document.getElementById('drive-filename'),
+  fileId: document.getElementById('drive-fileid'),
+  backupNow: document.getElementById('btn-backup-now'),
 };
 
 // Fill categories
 el.category.innerHTML = CATEGORIES.map(c => `<option value="${c.key}">${c.key}</option>`).join('');
 el.date.value = todayStr();
+
+// Load settings into UI
+function syncSettingsToUI(){
+  el.clientId.value = state.settings.clientId || '';
+  el.fileName.value = state.settings.fileName || 'chi_tieu.json';
+  el.fileId.value = state.settings.fileId || '';
+  el.settingsPanel.querySelectorAll('input.auto-mode').forEach(r => r.checked = (r.value === state.settings.mode));
+  el.autoMinutes.value = state.settings.minutes || 5;
+  updateAuthStatus();
+}
+syncSettingsToUI();
 
 // ====== Calendar Render ======
 function renderCalendar() {
@@ -268,10 +359,10 @@ function renderSummary() {
 }
 
 function renderList() {
-  const q = state.search.trim().toLowerCase();
-  let arr = getDayData().filter(t => t.description.toLowerCase().includes(q));
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  let arr = getDayData().filter(t => (t.description || '').toLowerCase().includes(q));
 
-  const [key, dir] = state.sort.split('-');
+  const [key, dir] = (document.getElementById('sort').value || 'createdAt-desc').split('-');
   arr.sort((a,b) => {
     if (key === 'createdAt') return dir === 'asc' ? (new Date(a.createdAt)-new Date(b.createdAt)) : (new Date(b.createdAt)-new Date(a.createdAt));
     if (key === 'amount') return dir === 'asc' ? (a.amount-b.amount) : (b.amount-a.amount);
@@ -336,7 +427,7 @@ function startEdit(id){
   const t = state.data.find(x=>x.id===id);
   if (!t) return;
   state.editingId = id;
-  el.txId.value = id;
+  document.getElementById('tx-id').value = id;
   el.amount.value = t.amount;
   el.description.value = t.description;
   el.date.value = new Date(t.createdAt).toISOString().slice(0,10);
@@ -345,49 +436,14 @@ function startEdit(id){
   el.amount.focus();
 }
 
-// ====== Events ======
-el.prev.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()-1); state.selected=d; render(); });
-el.next.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()+1); state.selected=d; render(); });
-
-el.search.addEventListener('input', (e)=>{ state.search=e.target.value; renderList(); });
-el.sort.addEventListener('change', (e)=>{ state.sort=e.target.value; renderList(); });
-
-el.reset.addEventListener('click', (e)=>{
-  e.preventDefault();
-  state.editingId = null;
-  el.txId.value='';
-  el.amount.value='';
-  el.description.value='';
-  el.date.value=todayStr();
-  el.type.value='expense';
-  el.category.value=CATEGORIES[0].key;
-});
-
-el.form.addEventListener('submit', (e)=>{
-  e.preventDefault();
-  const amount = parseFloat((el.amount.value+'').replace(/[^\d.-]/g,''));
-  if (isNaN(amount) || amount <= 0) { alert('Số tiền không hợp lệ'); return; }
-
-  const tx = {
-    id: el.txId.value || crypto.randomUUID(),
-    amount,
-    description: el.description.value.trim() || '(Không mô tả)',
-    type: el.type.value,
-    category: el.category.value,
-    createdAt: new Date(el.date.value || todayStr()).toISOString(),
-  };
-  upsertTx(tx);
-  el.reset.click();
-});
-
-// Export/Import
+// ====== Manual export/import ======
 el.exportBtn.addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `chi_tieu_${Date.now()}.json`;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 });
 el.importFile.addEventListener('change', (e)=>{
   const file = e.target.files[0];
@@ -397,7 +453,6 @@ el.importFile.addEventListener('change', (e)=>{
     try {
       const arr = JSON.parse(reader.result);
       if (!Array.isArray(arr)) throw new Error('File không đúng định dạng');
-      // normalize
       const cleaned = arr.map(t => ({
         id: t.id || crypto.randomUUID(),
         amount: Number(t.amount)||0,
@@ -415,6 +470,202 @@ el.importFile.addEventListener('change', (e)=>{
   reader.readAsText(file);
 });
 
+// ====== Google Drive Upload ======
+// Using Google Identity Services for token issuance.
+const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+function updateAuthStatus(){
+  el.authStatus.textContent = state.oauth.token ? 'Đã đăng nhập' : 'Chưa đăng nhập';
+}
+
+async function ensureTokenInteractive(){
+  const clientId = (el.clientId.value || '').trim();
+  if (!clientId) { alert('Nhập Google OAuth Client ID trong Cài đặt.'); return null; }
+
+  return new Promise((resolve) => {
+    /* global google */
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: SCOPE,
+      prompt: state.oauth.token ? '' : 'consent',
+      callback: (resp) => {
+        if (resp && resp.access_token) {
+          state.oauth.token = resp.access_token;
+          state.settings.clientId = clientId;
+          saveSettings(state.settings);
+          updateAuthStatus();
+          resolve(resp.access_token);
+        } else {
+          resolve(null);
+        }
+      }
+    });
+    tokenClient.requestAccessToken();
+  });
+}
+
+async function uploadToDrive(auto=false){
+  try {
+    let token = state.oauth.token;
+    if (!token) token = await ensureTokenInteractive();
+    if (!token) return;
+
+    const fileName = (el.fileName.value || 'chi_tieu.json').trim();
+    const fileIdInput = (el.fileId.value || '').trim();
+
+    const content = JSON.stringify(state.data, null, 2);
+    const metadata = { name: fileName };
+    const boundary = '-------314159265358979323846';
+    const delimiter = '\\r\\n--' + boundary + '\\r\\n';
+    const closeDelim = '\\r\\n--' + boundary + '--';
+
+    const body =
+      delimiter + 'Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n' +
+      JSON.stringify(metadata) +
+      delimiter + 'Content-Type: application/json\\r\\n\\r\\n' +
+      content + closeDelim;
+
+    const method = fileIdInput ? 'PATCH' : 'POST';
+    const url = fileIdInput
+      ? `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileIdInput)}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'multipart/related; boundary=' + boundary
+      },
+      body
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Upload thất bại: ' + res.status + ' ' + txt);
+    }
+    const json = await res.json();
+    el.fileId.value = json.id || fileIdInput;
+    state.settings.fileId = el.fileId.value;
+    state.settings.fileName = fileName;
+    saveSettings(state.settings);
+    if (!auto) alert('Đã sao lưu lên Google Drive!\\nFile ID: ' + el.fileId.value);
+  } catch (e) {
+    console.error(e);
+    if (!auto) alert(e.message);
+  }
+}
+
+// Manual backup button
+el.backupNow.addEventListener('click', ()=> uploadToDrive(false));
+
+// ====== Auto-backup logic ======
+let backupTimer = null;
+function onDataChanged(){
+  const s = state.settings;
+  if (s.mode === 'change') {
+    const now = Date.now();
+    if (now - (s.lastBackup||0) < 30_000) return; // 30s window
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(async ()=>{
+      await uploadToDrive(true);
+      s.lastBackup = Date.now();
+      saveSettings(s);
+    }, 800);
+  }
+}
+function setupInterval(){
+  if (state.intervalId) { clearInterval(state.intervalId); state.intervalId = null; }
+  const s = state.settings;
+  if (s.mode === 'interval') {
+    const ms = Math.max(1, Number(s.minutes||5)) * 60_000;
+    state.intervalId = setInterval(async ()=>{
+      await uploadToDrive(true);
+      s.lastBackup = Date.now();
+      saveSettings(s);
+    }, ms);
+  }
+}
+
+// ====== Settings UI & events ======
+el.settingsBtn.addEventListener('click', ()=>{
+  el.settingsPanel.classList.toggle('hidden');
+  syncSettingsToUI();
+});
+document.addEventListener('click', (e)=>{
+  if (!el.settingsPanel.contains(e.target) && e.target !== el.settingsBtn) {
+    el.settingsPanel.classList.add('hidden');
+  }
+});
+el.clientId.addEventListener('change', ()=>{
+  state.settings.clientId = el.clientId.value.trim();
+  saveSettings(state.settings);
+});
+el.fileName.addEventListener('change', ()=>{
+  state.settings.fileName = el.fileName.value.trim();
+  saveSettings(state.settings);
+});
+el.fileId.addEventListener('change', ()=>{
+  state.settings.fileId = el.fileId.value.trim();
+  saveSettings(state.settings);
+});
+
+function bindAutoRadios(){
+  el.settingsPanel.querySelectorAll('input.auto-mode').forEach(r => {
+    r.addEventListener('change', ()=>{
+      state.settings.mode = r.value;
+      saveSettings(state.settings);
+      setupInterval();
+    });
+  });
+}
+bindAutoRadios();
+el.autoMinutes.addEventListener('change', ()=>{
+  const v = Math.max(1, Number(el.autoMinutes.value||5));
+  state.settings.minutes = v;
+  saveSettings(state.settings);
+  setupInterval();
+});
+
+// Auth buttons
+el.authBtn.addEventListener('click', ensureTokenInteractive);
+el.signoutBtn.addEventListener('click', ()=>{
+  state.oauth.token = null;
+  updateAuthStatus();
+});
+
+// ====== Core UI events ======
+el.prev.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()-1); state.selected=d; render(); });
+el.next.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()+1); state.selected=d; render(); });
+el.search.addEventListener('input', ()=> renderList());
+el.sort.addEventListener('change', ()=> renderList());
+el.reset.addEventListener('click', (e)=>{
+  e.preventDefault();
+  state.editingId = null;
+  document.getElementById('tx-id').value='';
+  el.amount.value='';
+  el.description.value='';
+  el.date.value=todayStr();
+  el.type.value='expense';
+  el.category.value=CATEGORIES[0].key;
+});
+el.form.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const amount = parseFloat((el.amount.value+'').replace(/[^\d.-]/g,''));
+  if (isNaN(amount) || amount <= 0) { alert('Số tiền không hợp lệ'); return; }
+  const tx = {
+    id: document.getElementById('tx-id').value || crypto.randomUUID(),
+    amount,
+    description: el.description.value.trim() || '(Không mô tả)',
+    type: el.type.value,
+    category: el.category.value,
+    createdAt: new Date(el.date.value || todayStr()).toISOString(),
+  };
+  const idx = state.data.findIndex(x=>x.id===tx.id);
+  if (idx >= 0) state.data[idx] = tx; else state.data.unshift(tx);
+  saveAll(state.data);
+  el.reset.click();
+});
+
 // ====== Render Root ======
 function render(){
   renderCalendar();
@@ -422,8 +673,7 @@ function render(){
   renderList();
   renderChart();
 }
-
-// First paint
+setupInterval();
 render();
 </script>
 </body>
