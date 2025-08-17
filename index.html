@@ -3,16 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quản Lý Chi Tiêu (Backup Google Drive)</title>
+  <title>Quản Lý Chi Tiêu (Auto Backup)</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Google Identity Services (for OAuth tokens) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     html, body { height: 100%; }
@@ -25,71 +22,45 @@
     .chip { @apply text-xs bg-gray-100 rounded px-2 py-1; }
     .input { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
     .select { @apply w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500; }
-    .muted { @apply text-gray-500; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 scroll-smooth">
   <div class="max-w-5xl mx-auto p-4 sm:p-6">
     <header class="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
       <h1 class="text-2xl sm:text-3xl font-extrabold">💰 Quản Lý Chi Tiêu</h1>
-     <button onclick="toggleSettings()" class="text-gray-600 hover:text-gray-900">
-      ⚙️ Cài đặt
-    </button>
-  </header>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-export" class="btn btn-ghost">Xuất</button>
+        <label class="btn btn-ghost cursor-pointer">
+          Nhập <input id="file-import" type="file" accept="application/json" class="hidden">
+        </label>
 
-  <!-- Main content (placeholder) -->
-  <main class="p-4">
-    <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
-      <h2 class="text-lg font-bold mb-4">Nội dung quản lý chi tiêu...</h2>
-      <p class="text-gray-600">Phần này giữ nguyên từ app gốc của bạn.</p>
-    </div>
-  </main>
-
-  <!-- Settings Panel -->
-  <div id="settingsPanel" 
-       class="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl transform translate-x-full transition-transform duration-300 overflow-y-auto rounded-l-xl z-50">
-    <div class="p-6 space-y-6">
-      <!-- Header -->
-      <div class="flex justify-between items-center">
-        <h2 class="text-xl font-bold text-gray-700">⚙️ Cài đặt</h2>
-        <button onclick="toggleSettings()" class="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+        <!-- Settings dropdown -->
+        <div class="relative">
+          <button id="btn-settings" class="btn btn-ghost">⚙️ Cài đặt</button>
+          <div id="panel-settings" class="hidden absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl p-4 z-10 card">
+            <div class="font-semibold mb-2">Tự động backup</div>
+            <div class="space-y-2 text-sm">
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="off" class="auto-mode">
+                <span>Tắt</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="change" class="auto-mode">
+                <span>Mỗi khi thay đổi (giới hạn 30s/lần)</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="radio" name="autoMode" value="interval" class="auto-mode">
+                <span>Định kỳ mỗi</span>
+                <input id="auto-minutes" type="number" min="1" class="input w-20" value="5">
+                <span>phút</span>
+              </label>
+            </div>
+            <div class="text-xs text-gray-500 mt-3">
+              Backup sẽ tải xuống file JSON. Trình duyệt có thể hỏi quyền tải nhiều file.
+            </div>
+          </div>
+        </div>
       </div>
-
-      <!-- Google OAuth -->
-      <div>
-        <label class="block text-sm font-medium text-gray-600 mb-1">Google Client ID</label>
-        <input id="clientIdInput" type="text" placeholder="Nhập Client ID..."
-               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
-      </div>
-
-      <!-- Drive Backup -->
-      <div class="space-y-3">
-        <button id="loginBtn" 
-                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg">Đăng nhập Google</button>
-        <button id="logoutBtn" 
-                class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg hidden">Đăng xuất</button>
-
-        <button id="backupBtn" 
-                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg">☁️ Sao lưu</button>
-        <button id="restoreBtn" 
-                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg">🔄 Khôi phục</button>
-      </div>
-
-      <!-- Auto backup -->
-      <div>
-        <label class="block text-sm font-medium text-gray-600 mb-1">Tự động sao lưu</label>
-        <select id="autoBackupSelect" 
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-          <option value="off">Tắt</option>
-          <option value="onChange">Khi có thay đổi</option>
-          <option value="interval">Định kỳ</option>
-        </select>
-      </div>
-
-      <!-- Status -->
-      <div id="status" class="text-sm text-gray-500 italic"></div>
-    </div>
-  </div>
     </header>
 
     <!-- Month Picker & Summary -->
@@ -185,7 +156,7 @@
     </section>
 
     <footer class="text-center text-xs text-gray-500 mt-6">
-      Dữ liệu lưu cục bộ (localStorage) + có thể đồng bộ lên Google Drive (yêu cầu client ID & đăng nhập).
+      Lưu cục bộ bằng <code>localStorage</code>. Có thể bật <b>Tự động backup</b> để tải file JSON định kỳ/ mỗi thay đổi.
     </footer>
   </div>
 
@@ -206,22 +177,23 @@ const CATEGORIES = [
 
 // ====== Storage ======
 const STORAGE_KEY = 'xpense.v1';
-const SETTINGS_KEY = 'xpense.settings.drive.v1';
+const SETTINGS_KEY = 'xpense.settings.v1';
 const loadAll = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 const saveAll = (arr) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  onDataChanged();
+  maybeAutoBackup(); // trigger backup depending on settings
 };
-
-const defaultSettings = { mode:'off', minutes:5, lastBackup:0, clientId:'', fileName:'chi_tieu.json', fileId:'', token:'' };
-const loadSettings = () => Object.assign({}, defaultSettings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+const loadSettings = () => {
+  const def = { mode:'off', minutes:5, lastBackup:0 };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }
+  catch(e){ return def; }
+};
 const saveSettings = (s) => localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 
 // ====== Helpers ======
 const fmt = (n) => Number(n||0).toLocaleString('vi-VN');
 const todayStr = () => new Date().toISOString().slice(0,10);
 const byMonth = (d) => ({y:d.getFullYear(), m:d.getMonth()}); // 0-index
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ====== State ======
 let state = {
@@ -232,10 +204,9 @@ let state = {
   editingId: null,
   settings: loadSettings(),
   intervalId: null,
-  oauth: { token: null, expires: 0, client: null }
 };
 
-// Seed demo
+// Seed demo if empty
 if (!state.data.length) {
   state.data = [
     { id: crypto.randomUUID(), amount: 35000, description: 'Cà phê', type:'expense', category:'Ăn uống', createdAt: new Date().toISOString() },
@@ -273,29 +244,11 @@ const el = {
   settingsPanel: document.getElementById('panel-settings'),
   autoModes: null,
   autoMinutes: document.getElementById('auto-minutes'),
-  authBtn: document.getElementById('btn-auth'),
-  signoutBtn: document.getElementById('btn-signout'),
-  authStatus: document.getElementById('auth-status'),
-  clientId: document.getElementById('gis-client-id'),
-  fileName: document.getElementById('drive-filename'),
-  fileId: document.getElementById('drive-fileid'),
-  backupNow: document.getElementById('btn-backup-now'),
 };
 
 // Fill categories
 el.category.innerHTML = CATEGORIES.map(c => `<option value="${c.key}">${c.key}</option>`).join('');
 el.date.value = todayStr();
-
-// Load settings into UI
-function syncSettingsToUI(){
-  el.clientId.value = state.settings.clientId || '';
-  el.fileName.value = state.settings.fileName || 'chi_tieu.json';
-  el.fileId.value = state.settings.fileId || '';
-  el.settingsPanel.querySelectorAll('input.auto-mode').forEach(r => r.checked = (r.value === state.settings.mode));
-  el.autoMinutes.value = state.settings.minutes || 5;
-  updateAuthStatus();
-}
-syncSettingsToUI();
 
 // ====== Calendar Render ======
 function renderCalendar() {
@@ -434,16 +387,83 @@ function startEdit(id){
   el.amount.focus();
 }
 
-// ====== Manual export/import ======
-el.exportBtn.addEventListener('click', ()=>{
+// ====== Export/Import ======
+function doExport(auto=false){
   const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g,'-');
   a.href = URL.createObjectURL(blob);
-  a.download = `chi_tieu_${Date.now()}.json`;
+  a.download = `chi_tieu_${ts}${auto?'_auto':''}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+
+// Debounce on-change backups (30s)
+let backupTimer = null;
+function maybeAutoBackup(){
+  const s = state.settings;
+  if (s.mode === 'change') {
+    const now = Date.now();
+    if (now - (s.lastBackup||0) < 30_000) return; // 30s gate
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(()=>{
+      doExport(true);
+      s.lastBackup = Date.now();
+      saveSettings(s);
+    }, 500);
+  }
+}
+
+function setupInterval(){
+  if (state.intervalId) { clearInterval(state.intervalId); state.intervalId = null; }
+  const s = state.settings;
+  if (s.mode === 'interval') {
+    const ms = Math.max(1, Number(s.minutes||5)) * 60_000;
+    state.intervalId = setInterval(()=>{
+      doExport(true);
+      s.lastBackup = Date.now();
+      saveSettings(s);
+    }, ms);
+  }
+}
+
+// ====== Events ======
+document.getElementById('prev-month').addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()-1); state.selected=d; render(); });
+document.getElementById('next-month').addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()+1); state.selected=d; render(); });
+
+document.getElementById('search').addEventListener('input', ()=> renderList());
+document.getElementById('sort').addEventListener('change', ()=> renderList());
+
+document.getElementById('reset').addEventListener('click', (e)=>{
+  e.preventDefault();
+  state.editingId = null;
+  document.getElementById('tx-id').value='';
+  el.amount.value='';
+  el.description.value='';
+  el.date.value=todayStr();
+  el.type.value='expense';
+  el.category.value=CATEGORIES[0].key;
 });
-el.importFile.addEventListener('change', (e)=>{
+
+document.getElementById('form').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const amount = parseFloat((el.amount.value+'').replace(/[^\d.-]/g,''));
+  if (isNaN(amount) || amount <= 0) { alert('Số tiền không hợp lệ'); return; }
+
+  const tx = {
+    id: document.getElementById('tx-id').value || crypto.randomUUID(),
+    amount,
+    description: el.description.value.trim() || '(Không mô tả)',
+    type: el.type.value,
+    category: el.category.value,
+    createdAt: new Date(el.date.value || todayStr()).toISOString(),
+  };
+  upsertTx(tx);
+  document.getElementById('reset').click();
+});
+
+document.getElementById('btn-export').addEventListener('click', ()=> doExport(false));
+document.getElementById('file-import').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -468,153 +488,26 @@ el.importFile.addEventListener('change', (e)=>{
   reader.readAsText(file);
 });
 
-// ====== Google Drive Upload ======
-// Using Google Identity Services for token issuance.
-const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-
-function updateAuthStatus(){
-  el.authStatus.textContent = state.oauth.token ? 'Đã đăng nhập' : 'Chưa đăng nhập';
-}
-
-async function ensureTokenInteractive(){
-  const clientId = (el.clientId.value || '').trim();
-  if (!clientId) { alert('Nhập Google OAuth Client ID trong Cài đặt.'); return null; }
-
-  return new Promise((resolve) => {
-    /* global google */
-    const tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPE,
-      prompt: state.oauth.token ? '' : 'consent',
-      callback: (resp) => {
-        if (resp && resp.access_token) {
-          state.oauth.token = resp.access_token;
-          state.settings.clientId = clientId;
-          saveSettings(state.settings);
-          updateAuthStatus();
-          resolve(resp.access_token);
-        } else {
-          resolve(null);
-        }
-      }
-    });
-    tokenClient.requestAccessToken();
-  });
-}
-
-async function uploadToDrive(auto=false){
-  try {
-    let token = state.oauth.token;
-    if (!token) token = await ensureTokenInteractive();
-    if (!token) return;
-
-    const fileName = (el.fileName.value || 'chi_tieu.json').trim();
-    const fileIdInput = (el.fileId.value || '').trim();
-
-    const content = JSON.stringify(state.data, null, 2);
-    const metadata = { name: fileName };
-    const boundary = '-------314159265358979323846';
-    const delimiter = '\\r\\n--' + boundary + '\\r\\n';
-    const closeDelim = '\\r\\n--' + boundary + '--';
-
-    const body =
-      delimiter + 'Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n' +
-      JSON.stringify(metadata) +
-      delimiter + 'Content-Type: application/json\\r\\n\\r\\n' +
-      content + closeDelim;
-
-    const method = fileIdInput ? 'PATCH' : 'POST';
-    const url = fileIdInput
-      ? `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileIdInput)}?uploadType=multipart`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'multipart/related; boundary=' + boundary
-      },
-      body
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error('Upload thất bại: ' + res.status + ' ' + txt);
-    }
-    const json = await res.json();
-    el.fileId.value = json.id || fileIdInput;
-    state.settings.fileId = el.fileId.value;
-    state.settings.fileName = fileName;
-    saveSettings(state.settings);
-    if (!auto) alert('Đã sao lưu lên Google Drive!\\nFile ID: ' + el.fileId.value);
-  } catch (e) {
-    console.error(e);
-    if (!auto) alert(e.message);
-  }
-}
-
-// Manual backup button
-el.backupNow.addEventListener('click', ()=> uploadToDrive(false));
-
-// ====== Auto-backup logic ======
-let backupTimer = null;
-function onDataChanged(){
-  const s = state.settings;
-  if (s.mode === 'change') {
-    const now = Date.now();
-    if (now - (s.lastBackup||0) < 30_000) return; // 30s window
-    clearTimeout(backupTimer);
-    backupTimer = setTimeout(async ()=>{
-      await uploadToDrive(true);
-      s.lastBackup = Date.now();
-      saveSettings(s);
-    }, 800);
-  }
-}
-function setupInterval(){
-  if (state.intervalId) { clearInterval(state.intervalId); state.intervalId = null; }
-  const s = state.settings;
-  if (s.mode === 'interval') {
-    const ms = Math.max(1, Number(s.minutes||5)) * 60_000;
-    state.intervalId = setInterval(async ()=>{
-      await uploadToDrive(true);
-      s.lastBackup = Date.now();
-      saveSettings(s);
-    }, ms);
-  }
-}
-
-// ====== Settings UI & events ======
+// Settings panel
 el.settingsBtn.addEventListener('click', ()=>{
   el.settingsPanel.classList.toggle('hidden');
-  syncSettingsToUI();
+  // sync UI
+  el.settingsPanel.querySelectorAll('input.auto-mode').forEach(r => r.checked = (r.value === state.settings.mode));
+  el.autoMinutes.value = state.settings.minutes || 5;
 });
 document.addEventListener('click', (e)=>{
   if (!el.settingsPanel.contains(e.target) && e.target !== el.settingsBtn) {
     el.settingsPanel.classList.add('hidden');
   }
 });
-el.clientId.addEventListener('change', ()=>{
-  state.settings.clientId = el.clientId.value.trim();
-  saveSettings(state.settings);
-});
-el.fileName.addEventListener('change', ()=>{
-  state.settings.fileName = el.fileName.value.trim();
-  saveSettings(state.settings);
-});
-el.fileId.addEventListener('change', ()=>{
-  state.settings.fileId = el.fileId.value.trim();
-  saveSettings(state.settings);
-});
-
+// Mode change
 function bindAutoRadios(){
-  el.settingsPanel.querySelectorAll('input.auto-mode').forEach(r => {
-    r.addEventListener('change', ()=>{
-      state.settings.mode = r.value;
-      saveSettings(state.settings);
-      setupInterval();
-    });
-  });
+  el.autoModes = el.settingsPanel.querySelectorAll('input.auto-mode');
+  el.autoModes.forEach(r => r.addEventListener('change', ()=>{
+    state.settings.mode = r.value;
+    saveSettings(state.settings);
+    setupInterval();
+  }));
 }
 bindAutoRadios();
 el.autoMinutes.addEventListener('change', ()=>{
@@ -624,46 +517,6 @@ el.autoMinutes.addEventListener('change', ()=>{
   setupInterval();
 });
 
-// Auth buttons
-el.authBtn.addEventListener('click', ensureTokenInteractive);
-el.signoutBtn.addEventListener('click', ()=>{
-  state.oauth.token = null;
-  updateAuthStatus();
-});
-
-// ====== Core UI events ======
-el.prev.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()-1); state.selected=d; render(); });
-el.next.addEventListener('click', ()=>{ const d=new Date(state.selected); d.setMonth(d.getMonth()+1); state.selected=d; render(); });
-el.search.addEventListener('input', ()=> renderList());
-el.sort.addEventListener('change', ()=> renderList());
-el.reset.addEventListener('click', (e)=>{
-  e.preventDefault();
-  state.editingId = null;
-  document.getElementById('tx-id').value='';
-  el.amount.value='';
-  el.description.value='';
-  el.date.value=todayStr();
-  el.type.value='expense';
-  el.category.value=CATEGORIES[0].key;
-});
-el.form.addEventListener('submit', (e)=>{
-  e.preventDefault();
-  const amount = parseFloat((el.amount.value+'').replace(/[^\d.-]/g,''));
-  if (isNaN(amount) || amount <= 0) { alert('Số tiền không hợp lệ'); return; }
-  const tx = {
-    id: document.getElementById('tx-id').value || crypto.randomUUID(),
-    amount,
-    description: el.description.value.trim() || '(Không mô tả)',
-    type: el.type.value,
-    category: el.category.value,
-    createdAt: new Date(el.date.value || todayStr()).toISOString(),
-  };
-  const idx = state.data.findIndex(x=>x.id===tx.id);
-  if (idx >= 0) state.data[idx] = tx; else state.data.unshift(tx);
-  saveAll(state.data);
-  el.reset.click();
-});
-
 // ====== Render Root ======
 function render(){
   renderCalendar();
@@ -671,6 +524,8 @@ function render(){
   renderList();
   renderChart();
 }
+
+// Initial setup
 setupInterval();
 render();
 </script>
